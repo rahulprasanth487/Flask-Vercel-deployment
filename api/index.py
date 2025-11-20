@@ -1,41 +1,50 @@
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
-import os
 import motor.motor_asyncio
 import uuid
-from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI()
 
+# Allow all origins (or restrict to your frontend domain)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Allow all origins (or restrict to your frontend URL)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
+# Pydantic model
 class TodoIn(BaseModel):
     title: str
     done: bool = False
 
+# Convert Mongo document → JSON
 def doc_to_todo(doc: dict) -> dict:
-    return {"id": str(doc.get("_id")), "title": doc.get("title", ""), "done": bool(doc.get("done", False))}
+    return {
+        "id": str(doc.get("_id")),
+        "title": doc.get("title", ""),
+        "done": bool(doc.get("done", False)),
+    }
 
+# MongoDB
 MONGODB_URI = os.getenv(
     "MONGODB_URI",
-    "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0",
+    "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0"
 )
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
 db = client["verceldemo_db"]
 collection = db["todos"]
 
-router = APIRouter(prefix="/api/todos")
+# -----------------------
+#    API ROUTES
+# -----------------------
 
-@router.get("/", response_model=List[dict])
+@app.get("/api/todos/", response_model=List[dict])
 async def list_todos():
     docs = []
     cursor = collection.find({}).sort("_id", -1)
@@ -43,25 +52,30 @@ async def list_todos():
         docs.append(doc_to_todo(d))
     return docs
 
-@router.post("/", status_code=201)
+
+@app.post("/api/todos/", status_code=201)
 async def create_todo(todo: TodoIn):
     new_id = uuid.uuid4().hex
     payload = {"_id": new_id, **todo.dict()}
     await collection.insert_one(payload)
     return {"id": new_id, **todo.dict()}
 
-@router.put("/{id}")
+
+@app.put("/api/todos/{id}")
 async def update_todo(id: str, todo: TodoIn):
     result = await collection.update_one({"_id": id}, {"$set": todo.dict()})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"id": id, **todo.dict()}
 
-@router.delete("/{id}")
+
+@app.delete("/api/todos/{id}")
 async def delete_todo(id: str):
     result = await collection.delete_one({"_id": id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not found")
     return {"deleted": True}
 
-app.include_router(router)
+
+# Required for Vercel serverless
+handler = app
