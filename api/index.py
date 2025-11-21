@@ -5,6 +5,7 @@ from typing import List
 import motor.motor_asyncio
 import uuid
 import os
+import traceback
 
 app = FastAPI()
 
@@ -60,6 +61,9 @@ async def list_todos():
             docs.append(doc_to_todo(d))
         return docs
     except Exception as e:
+        # Print full traceback for function logs
+        print("Database error:", repr(e))
+        traceback.print_exc()
         raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 
