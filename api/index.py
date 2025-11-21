@@ -31,10 +31,7 @@ def doc_to_todo(doc: dict) -> dict:
     }
 
 # MongoDB
-MONGODB_URI = os.getenv(
-    "MONGODB_URI",
-    "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0"
-)
+MONGODB_URI = "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0"
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
 db = client["verceldemo_db"]
@@ -46,35 +43,51 @@ collection = db["todos"]
 
 @app.get("/api/todos/", response_model=List[dict])
 async def list_todos():
-    docs = []
-    cursor = collection.find({}).sort("_id", -1)
-    async for d in cursor:
-        docs.append(doc_to_todo(d))
-    return docs
+    try:
+        docs = []
+        cursor = collection.find({}).sort("_id", -1)
+        async for d in cursor:
+            docs.append(doc_to_todo(d))
+        return docs
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 
 @app.post("/api/todos/", status_code=201)
 async def create_todo(todo: TodoIn):
-    new_id = uuid.uuid4().hex
-    payload = {"_id": new_id, **todo.dict()}
-    await collection.insert_one(payload)
-    return {"id": new_id, **todo.dict()}
+    try:
+        new_id = uuid.uuid4().hex
+        payload = {"_id": new_id, **todo.dict()}
+        await collection.insert_one(payload)
+        return {"id": new_id, **todo.dict()}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 
 @app.put("/api/todos/{id}")
 async def update_todo(id: str, todo: TodoIn):
-    result = await collection.update_one({"_id": id}, {"$set": todo.dict()})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Not found")
-    return {"id": id, **todo.dict()}
+    try:
+        result = await collection.update_one({"_id": id}, {"$set": todo.dict()})
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"id": id, **todo.dict()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 
 @app.delete("/api/todos/{id}")
 async def delete_todo(id: str):
-    result = await collection.delete_one({"_id": id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Not found")
-    return {"deleted": True}
+    try:
+        result = await collection.delete_one({"_id": id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"deleted": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
 
 
 # Required for Vercel serverless
