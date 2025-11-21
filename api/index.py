@@ -32,8 +32,7 @@ def doc_to_todo(doc: dict) -> dict:
     }
 
 # MongoDB
-MONGODB_URI = "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0"
-
+MONGODB_URI =  os.environ.get("MONGODB_URI")
 # Lazy initialization - connect on first use
 client = None
 db = None
@@ -50,6 +49,19 @@ async def get_collection():
 # -----------------------
 #    API ROUTES
 # -----------------------
+
+
+@app.get("/api/todos/health")
+async def health_check():
+    """Lightweight health endpoint that does not touch MongoDB.
+    Returns a static set of sample todos for quick UI checks.
+    """
+    sample = [
+        {"id": "sample-1", "title": "Sample todo 1", "done": False},
+        {"id": "sample-2", "title": "Sample todo 2", "done": True},
+    ]
+    return {"status": "ok", "todos": sample}
+
 
 @app.get("/api/todos/", response_model=List[dict])
 async def list_todos():

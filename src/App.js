@@ -13,7 +13,7 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchTodos();
+    // Do not auto-fetch todos on page load. Waiting for user action.
   }, []);
 
   async function fetchTodos() {
@@ -28,6 +28,25 @@ function App() {
       setTodos(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('fetchTodos error', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Fetch sample todos from the health endpoint (no MongoDB touch)
+  async function fetchSampleTodos() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      if (!res.ok) {
+        console.error('fetchSampleTodos failed', res.status);
+        return;
+      }
+      const data = await res.json();
+      // Health endpoint returns { status, todos }
+      if (data && Array.isArray(data.todos)) setTodos(data.todos);
+    } catch (err) {
+      console.error('fetchSampleTodos error', err);
     } finally {
       setLoading(false);
     }
@@ -108,6 +127,15 @@ function App() {
           />
           <button style={{ marginLeft: 8, padding: '8px 12px' }}>Add</button>
         </form>
+
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+          <button onClick={fetchSampleTodos} style={{ padding: '8px 12px' }}>
+            Load sample todos (health check)
+          </button>
+          <button onClick={fetchTodos} style={{ padding: '8px 12px' }}>
+            Load todos from backend
+          </button>
+        </div>
 
         {loading ? (
           <p>Loading...</p>
