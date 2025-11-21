@@ -50,6 +50,9 @@ async def get_collection():
 #    API ROUTES
 # -----------------------
 
+@app.get("/")
+async def root():
+    return "Welcome to the Todo API"
 
 @app.get("/api/todos/health")
 async def health_check():
