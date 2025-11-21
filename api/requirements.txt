@@ -1,7 +1,5 @@
-fastapi==0.100.0
-uvicorn[standard]==0.22.0
-motor==3.1.1
-# Pin pymongo to a compatible version for Motor. If you get import errors
-# about internal names like `_QUERY_OPTIONS`, that means Motor and PyMongo
-# versions are mismatched. The lines below help ensure compatible pairings.
-pymongo==4.3.3
+fastapi
+motor
+pymongo
+uvicorn
+certifi

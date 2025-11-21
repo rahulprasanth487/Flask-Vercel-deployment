@@ -33,9 +33,18 @@ def doc_to_todo(doc: dict) -> dict:
 # MongoDB
 MONGODB_URI = "mongodb+srv://clgworks2024_db_user:Rx5U0XJKuAWe0JRJ@cluster0.zyj1byl.mongodb.net/?appName=Cluster0"
 
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
-db = client["verceldemo_db"]
-collection = db["todos"]
+# Lazy initialization - connect on first use
+client = None
+db = None
+collection = None
+
+async def get_collection():
+    global client, db, collection
+    if client is None:
+        client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
+        db = client["verceldemo_db"]
+        collection = db["todos"]
+    return collection
 
 # -----------------------
 #    API ROUTES
@@ -44,6 +53,7 @@ collection = db["todos"]
 @app.get("/api/todos/", response_model=List[dict])
 async def list_todos():
     try:
+        collection = await get_collection()
         docs = []
         cursor = collection.find({}).sort("_id", -1)
         async for d in cursor:
@@ -56,6 +66,7 @@ async def list_todos():
 @app.post("/api/todos/", status_code=201)
 async def create_todo(todo: TodoIn):
     try:
+        collection = await get_collection()
         new_id = uuid.uuid4().hex
         payload = {"_id": new_id, **todo.dict()}
         await collection.insert_one(payload)
@@ -67,6 +78,7 @@ async def create_todo(todo: TodoIn):
 @app.put("/api/todos/{id}")
 async def update_todo(id: str, todo: TodoIn):
     try:
+        collection = await get_collection()
         result = await collection.update_one({"_id": id}, {"$set": todo.dict()})
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Not found")
@@ -80,6 +92,7 @@ async def update_todo(id: str, todo: TodoIn):
 @app.delete("/api/todos/{id}")
 async def delete_todo(id: str):
     try:
+        collection = await get_collection()
         result = await collection.delete_one({"_id": id})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Not found")
