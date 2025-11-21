@@ -32,7 +32,7 @@ def doc_to_todo(doc: dict) -> dict:
     }
 
 # MongoDB
-MONGODB_URI =  os.environ.get("MONGODB_URI")
+# MONGODB_URI =  os.environ.get("MONGODB_URI")
 # Lazy initialization - connect on first use
 client = None
 db = None
@@ -41,7 +41,7 @@ collection = None
 async def get_collection():
     global client, db, collection
     if client is None:
-        client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
+        client = motor.motor_asyncio.AsyncIOMotorClient(os.environ.get("MONGODB_URI"))
         db = client["verceldemo_db"]
         collection = db["todos"]
     return collection
